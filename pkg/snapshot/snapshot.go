@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/go-logr/logr"
+	//helmclient "github.com/joelanford/helm-operator/pkg/client"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chart/loader"
@@ -16,7 +17,12 @@ import (
 	"helm.sh/helm/v3/pkg/getter"
 	"helm.sh/helm/v3/pkg/release"
 	"helm.sh/helm/v3/pkg/repo"
+
+	//"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	//"k8s.io/apimachinery/pkg/runtime/schema"
+	//ctrl "sigs.k8s.io/controller-runtime"
+	//"sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
 const (
@@ -24,32 +30,59 @@ const (
 	SnapshotDir string = "velero"
 )
 
+//SnapPreHook1 helps to take snapshot at deletion
+func SnapPreHook1(obj *unstructured.Unstructured, vals chartutil.Values, log logr.Logger) error {
+	log.Info("IN SNAPSHOT1 HOOK")
+	return nil
+}
+
 //SnapPreHook helps to take snapshot at deletion
 func SnapPreHook(obj *unstructured.Unstructured, vals chartutil.Values, log logr.Logger) error {
 
 	log.Info("IN SNAPSHOT HOOK")
 
-	chart, err := loadSnapshotChart(log)
+	/*chart, err := LoadSnapshotChart(log)
 	if err != nil {
 		log.Error(err, "Failed to load velero chart")
 		return err
-	}
+	}*/
+	/*
+		cfg, err := config.GetConfig()
+		if err != nil {
+			log.Error(err, "unable to get config")
+			os.Exit(1)
+		}
+		mapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{})
+		snapLog := ctrl.Log.WithName("Snapshot_Helm_CLient")
+		cfgGetter := helmclient.NewActionConfigGetter(cfg, mapper, snapLog)
+		acg := helmclient.NewActionClientGetter(cfgGetter)
+		acf, err := acg.ActionClientFor(obj)
+		var opts []helmclient.InstallOption
+		rel, err := acf.Install("velero", "", chart, vals.AsMap(), opts...)
+		if err != nil {
+			log.Error(err, "Failed to install velero chart")
+			return err
+		}
 
-	rel, err := installChart(chart)
+	*/
+	/*
+			rel, err := installChart(chart)
 
-	if err != nil {
-		log.Error(err, "Failed to install velero chart")
-		return err
-	}
+			if err != nil {
+				log.Error(err, "Failed to install velero chart")
+				return err
+			}
 
-	log.Info(fmt.Sprintf("release info: %v", rel))
+		log.Info(fmt.Sprintf("release info: %v", rel))
+	*/
 
 	log.Info("OUT SNAPSHOT HOOK")
 
 	return nil
 }
 
-func loadSnapshotChart(log logr.Logger) (*chart.Chart, error) {
+//Load Snapshot Chart
+func LoadSnapshotChart(log logr.Logger) (*chart.Chart, error) {
 
 	log.Info("Attempt to load snapshot chart")
 

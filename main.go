@@ -28,15 +28,18 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"k8s.io/klog"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	zapl "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/kubebuilder/pkg/cli"
 
 	"github.com/joelanford/helm-operator/pkg/annotation"
+	"github.com/joelanford/helm-operator/pkg/backup"
+	helmclient "github.com/joelanford/helm-operator/pkg/client"
 	"github.com/joelanford/helm-operator/pkg/hook"
 	"github.com/joelanford/helm-operator/pkg/manager"
 	pluginv1 "github.com/joelanford/helm-operator/pkg/plugin/v1"
 	"github.com/joelanford/helm-operator/pkg/reconciler"
-	"github.com/joelanford/helm-operator/pkg/snapshot"
+	"github.com/joelanford/helm-operator/pkg/restore"
 	"github.com/joelanford/helm-operator/pkg/watches"
 	"github.com/joelanford/helm-operator/version"
 )
@@ -169,6 +172,18 @@ func newRunCmd() *cobra.Command {
 			os.Exit(1)
 		}
 
+		cfg, err := config.GetConfig()
+		if err != nil {
+			setupLog.Error(err, "unable to get config")
+			os.Exit(1)
+		}
+		snapLog := ctrl.Log.WithName("Snapshot_Loader_Helm_CLient")
+		cfgGetter := helmclient.NewActionConfigGetter(cfg, mgr.GetRESTMapper(), snapLog)
+		acg := helmclient.NewActionClientGetter(cfgGetter)
+
+		b := backup.NewBackup(mgr.GetClient(), acg)
+		r := restore.NewRestore(mgr.GetClient())
+
 		for _, w := range ws {
 			reconcilePeriod := defaultReconcilePeriod
 			if w.ReconcilePeriod != nil {
@@ -190,7 +205,9 @@ func newRunCmd() *cobra.Command {
 				reconciler.WithInstallAnnotations(annotation.DefaultInstallAnnotations...),
 				reconciler.WithUpgradeAnnotations(annotation.DefaultUpgradeAnnotations...),
 				reconciler.WithUninstallAnnotations(annotation.DefaultUninstallAnnotations...),
-				reconciler.WithPreHook(hook.PreHookFunc(snapshot.SnapPreHook)),
+				//reconciler.WithPreHook(hook.PreHookFunc(snapshot.SnapPreHook)),
+				reconciler.WithPostHook(hook.PostHookFunc(b.BckupPostHook)),
+				reconciler.WithPostHook(hook.PostHookFunc(r.RestorePostHook)),
 			)
 			if err != nil {
 				setupLog.Error(err, "unable to create helm reconciler", "controller", "Helm")

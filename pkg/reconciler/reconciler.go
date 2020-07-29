@@ -472,6 +472,7 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (res ctrl.Result, err error) {
 	u.UpdateStatus(updater.EnsureCondition(conditions.Initialized(corev1.ConditionTrue, "", "")))
 
 	if obj.GetDeletionTimestamp() != nil {
+		log.Info("Deletion here @ 477 reconciler.go")
 		err := r.handleDeletion(ctx, actionClient, obj, log)
 		return ctrl.Result{}, err
 	}
@@ -496,6 +497,8 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (res ctrl.Result, err error) {
 		return ctrl.Result{}, err
 	}
 	u.UpdateStatus(updater.EnsureCondition(conditions.Irreconcilable(corev1.ConditionFalse, "", "")))
+
+	//log.Info(fmt.Sprintf("rel: %+v \n state: %+v", rel, state))
 
 	for _, h := range r.preHooks {
 		log.Info("RUNNING PREHOOKS")
@@ -536,6 +539,7 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (res ctrl.Result, err error) {
 	}
 
 	for _, h := range r.postHooks {
+		log.Info("RUNNING POSTHOOKS")
 		if err := h.Exec(obj, *rel, log); err != nil {
 			log.Error(err, "post-release hook failed", "name", rel.Name, "version", rel.Version)
 		}
@@ -547,9 +551,26 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (res ctrl.Result, err error) {
 		updater.EnsureCondition(conditions.Irreconcilable(corev1.ConditionFalse, "", "")),
 	)
 
+	/*//try installing here:
+	chart, err := snapshot.LoadSnapshotChart(log)
+	if err != nil {
+		log.Error(err, "Failed to load velero chart")
+		//return ctrl.Result{}, err
+	}
+	var opts []helmclient.InstallOption
+	rel1, err := actionClient.Install("velero", "", chart, nil, opts...)
+	if err != nil {
+		log.Error(err, "Failed to install velero chart")
+		//return ctrl.Result{}, err
+	}
+
+	log.Info(fmt.Sprintf("release info: %v", rel1))
+	log.Info("Done/NOT")
+	*/
 	return ctrl.Result{RequeueAfter: r.reconcilePeriod}, nil
 }
 
+//imp
 func (r *Reconciler) getValues(obj *unstructured.Unstructured) (chartutil.Values, error) {
 	crVals, err := internalvalues.FromUnstructured(obj)
 	if err != nil {
