@@ -177,12 +177,12 @@ func newRunCmd() *cobra.Command {
 			setupLog.Error(err, "unable to get config")
 			os.Exit(1)
 		}
-		snapLog := ctrl.Log.WithName("Snapshot_Loader_Helm_CLient")
-		cfgGetter := helmclient.NewActionConfigGetter(cfg, mgr.GetRESTMapper(), snapLog)
+		acgLog := ctrl.Log.WithName("VeleroHelmCLient")
+		cfgGetter := helmclient.NewActionConfigGetter(cfg, mgr.GetRESTMapper(), acgLog)
 		acg := helmclient.NewActionClientGetter(cfgGetter)
 
 		b := backup.NewBackup(mgr.GetClient(), acg)
-		r := restore.NewRestore(mgr.GetClient())
+		r := restore.NewRestore(mgr.GetClient(), acg)
 
 		for _, w := range ws {
 			reconcilePeriod := defaultReconcilePeriod
@@ -205,7 +205,6 @@ func newRunCmd() *cobra.Command {
 				reconciler.WithInstallAnnotations(annotation.DefaultInstallAnnotations...),
 				reconciler.WithUpgradeAnnotations(annotation.DefaultUpgradeAnnotations...),
 				reconciler.WithUninstallAnnotations(annotation.DefaultUninstallAnnotations...),
-				//reconciler.WithPreHook(hook.PreHookFunc(snapshot.SnapPreHook)),
 				reconciler.WithPostHook(hook.PostHookFunc(b.BckupPostHook)),
 				reconciler.WithPostHook(hook.PostHookFunc(r.RestorePostHook)),
 			)
